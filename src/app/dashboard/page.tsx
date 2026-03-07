@@ -3,6 +3,7 @@ import { useAuth, UserButton } from "@clerk/react";
 import { useNavigate } from "react-router-dom";
 import Link from "@/lib/link";
 import Logo from "@/components/Logo";
+import { apiFetch } from "@/lib/api";
 
 interface Trip {
     _id: string;
@@ -12,21 +13,6 @@ interface Trip {
     ownerId: string;
     createdAt: string;
     role?: string;
-}
-
-const TRIPS_STORAGE_KEY = "tripkaro_trips";
-
-function loadTrips(): Trip[] {
-    try {
-        const raw = localStorage.getItem(TRIPS_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveTrips(trips: Trip[]) {
-    localStorage.setItem(TRIPS_STORAGE_KEY, JSON.stringify(trips));
 }
 
 function formatDate(dateStr: string) {
@@ -73,10 +59,11 @@ function TripCard({ trip, isOwned }: { trip: Trip; isOwned: boolean }) {
 }
 
 export default function DashboardPage() {
-    const { isSignedIn, isLoaded, userId } = useAuth();
+    const { isSignedIn, isLoaded, userId, getToken } = useAuth();
     const navigate = useNavigate();
 
     const [myTrips, setMyTrips] = useState<Trip[]>([]);
+    const [joinedTrips, setJoinedTrips] = useState<Trip[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -87,16 +74,24 @@ export default function DashboardPage() {
     const [newEnd, setNewEnd] = useState("");
     const [creating, setCreating] = useState(false);
 
-    const refreshTrips = useCallback(() => {
-        const all = loadTrips();
-        const mine = userId ? all.filter((t) => t.ownerId === userId) : all;
-        setMyTrips(mine);
-        setLoading(false);
-    }, [userId]);
+    const refreshTrips = useCallback(async () => {
+        if (!isSignedIn) return;
+        try {
+            setLoading(true);
+            const token = await getToken();
+            const data = await apiFetch("/api/dashboard", token);
+            setMyTrips(data.myTrips ?? []);
+            setJoinedTrips(data.joinedTrips ?? []);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to load trips");
+        } finally {
+            setLoading(false);
+        }
+    }, [isSignedIn, getToken]);
 
     useEffect(() => {
-        refreshTrips();
-    }, [refreshTrips]);
+        if (isLoaded) refreshTrips();
+    }, [isLoaded, refreshTrips]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,31 +99,22 @@ export default function DashboardPage() {
         try {
             setCreating(true);
             setError("");
-            const trip: Trip = {
-                _id: crypto.randomUUID(),
-                title: newTitle.trim(),
-                startDate: newStart,
-                endDate: newEnd,
-                ownerId: userId ?? "local",
-                createdAt: new Date().toISOString(),
-            };
-            const all = loadTrips();
-            all.push(trip);
-            saveTrips(all);
+            const token = await getToken();
+            const data = await apiFetch("/api/trips", token, {
+                method: "POST",
+                body: JSON.stringify({ title: newTitle.trim(), startDate: newStart, endDate: newEnd }),
+            });
             setNewTitle("");
             setNewStart("");
             setNewEnd("");
             setShowCreate(false);
-            refreshTrips();
-            navigate(`/trip/${trip._id}`);
+            navigate(`/trip/${data.tripId}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to create trip. Please try again.");
         } finally {
             setCreating(false);
         }
     };
-
-    const joinedTrips: Trip[] = [];
 
     if (!isLoaded) {
         return (
