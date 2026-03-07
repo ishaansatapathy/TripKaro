@@ -4,6 +4,7 @@ import { useAuth, useUser } from "@clerk/react";
 import Link from "@/lib/link";
 import Logo from "@/components/Logo";
 import { apiFetch } from "@/lib/api";
+import { CommentThread } from "@/components/trip/CommentThread";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Trip {
@@ -23,6 +24,7 @@ interface Expense { _id: string; tripId: string; title: string; amount: number; 
 interface Attachment { _id: string; tripId: string; fileName: string; fileType: string; fileSize: number; dataUrl: string; createdAt: number; }
 type ReservationType = "hotel" | "restaurant" | "tour" | "transport" | "other";
 interface Reservation { _id: string; tripId: string; title: string; type: ReservationType; location?: string; date?: string; time?: string; notes?: string; }
+interface Member { _id: string; userId: string; tripId: string; role: string; email?: string; name?: string; }
 
 // ─── localStorage helpers ───────────────────────────────────────────
 function load<T>(key: string, fallback: T): T { try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; } catch { return fallback; } }
@@ -60,21 +62,29 @@ export default function TripPage() {
 
     const [trip, setTrip] = useState<Trip | null>(null);
     const [tripLoading, setTripLoading] = useState(true);
+    const [userRole, setUserRole] = useState<string>("Viewer");
+    const [members, setMembers] = useState<Member[]>([]);
     const [days, setDays] = useState<Day[]>([]);
     const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
     const [checklists, setChecklists] = useState<Checklist[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [attachments, setAttachments] = useState<Attachment[]>([]);
     const [reservations, setReservations] = useState<Reservation[]>([]);
-    const [activeTab, setActiveTab] = useState<"itinerary" | "checklists" | "budget" | "attachments" | "reservations">("itinerary");
+    const [activeTab, setActiveTab] = useState<"itinerary" | "checklists" | "budget" | "attachments" | "reservations" | "members">("itinerary");
 
     const reload = useCallback(async () => {
         if (!tripId) return;
         try {
             setTripLoading(true);
             const token = await getToken();
-            const tripData = await apiFetch(`/api/trips/${tripId}`, token);
+            const [tripData, roleData, membersData] = await Promise.all([
+                apiFetch(`/api/trips/${tripId}`, token),
+                apiFetch(`/api/trips/${tripId}/role`, token).catch(() => ({ role: "Viewer" })),
+                apiFetch(`/api/trips/${tripId}/members`, token).catch(() => []),
+            ]);
             setTrip(tripData);
+            setUserRole(roleData.role ?? "Viewer");
+            setMembers(membersData ?? []);
         } catch {
             setTrip(null);
         } finally {
@@ -124,6 +134,7 @@ export default function TripPage() {
         { key: "budget" as const, label: "Budget", icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
         { key: "attachments" as const, label: "Files", icon: "M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" },
         { key: "reservations" as const, label: "Reservations", icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" },
+        { key: "members" as const, label: `Members${members.length ? ` (${members.length})` : ""}`, icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" },
     ];
 
     return (
@@ -157,11 +168,12 @@ export default function TripPage() {
             </div>
 
             <main className="max-w-5xl mx-auto px-6 py-8">
-                {activeTab === "itinerary" && <ItineraryTab tripId={tripId!} days={days} activitiesMap={activitiesMap} onDaysChange={saveDays} onActivitiesChange={saveActivities} />}
+                {activeTab === "itinerary" && <ItineraryTab tripId={tripId!} days={days} activitiesMap={activitiesMap} onDaysChange={saveDays} onActivitiesChange={saveActivities} userRole={userRole} />}
                 {activeTab === "checklists" && <ChecklistTab checklists={checklists} onChange={saveChecklists} />}
                 {activeTab === "budget" && <BudgetTab expenses={expenses} onChange={saveExpenses} userId={userId ?? user?.id ?? "local"} />}
                 {activeTab === "attachments" && <AttachmentTab tripId={tripId!} attachments={attachments} onChange={saveAttachments} />}
                 {activeTab === "reservations" && <ReservationTab reservations={reservations} onChange={saveReservations} />}
+                {activeTab === "members" && <MembersTab tripId={tripId!} members={members} userRole={userRole} onMembersChange={setMembers} />}
             </main>
         </div>
     );
@@ -170,8 +182,8 @@ export default function TripPage() {
 // ═══════════════════════════════════════════════════════════════════
 //  ITINERARY TAB
 // ═══════════════════════════════════════════════════════════════════
-function ItineraryTab({ tripId, days, activitiesMap, onDaysChange, onActivitiesChange }: {
-    tripId: string; days: Day[]; activitiesMap: Record<string, Activity[]>; onDaysChange: (d: Day[]) => void; onActivitiesChange: (dayId: string, a: Activity[]) => void;
+function ItineraryTab({ tripId, days, activitiesMap, onDaysChange, onActivitiesChange, userRole }: {
+    tripId: string; days: Day[]; activitiesMap: Record<string, Activity[]>; onDaysChange: (d: Day[]) => void; onActivitiesChange: (dayId: string, a: Activity[]) => void; userRole: string;
 }) {
     const [addDayDate, setAddDayDate] = useState("");
     const [showAddDay, setShowAddDay] = useState(false);
@@ -216,7 +228,7 @@ function ItineraryTab({ tripId, days, activitiesMap, onDaysChange, onActivitiesC
             ) : (
                 <div className="space-y-6">
                     {days.sort((a, b) => a.order - b.order).map((day) => (
-                        <DaySection key={day._id} day={day} activities={activitiesMap[day._id] || []} onActivitiesChange={(a) => onActivitiesChange(day._id, a)} onDelete={() => handleDeleteDay(day._id)} />
+                        <DaySection key={day._id} day={day} activities={activitiesMap[day._id] || []} onActivitiesChange={(a) => onActivitiesChange(day._id, a)} onDelete={() => handleDeleteDay(day._id)} userRole={userRole} />
                     ))}
                 </div>
             )}
@@ -224,11 +236,12 @@ function ItineraryTab({ tripId, days, activitiesMap, onDaysChange, onActivitiesC
     );
 }
 
-function DaySection({ day, activities, onActivitiesChange, onDelete }: {
-    day: Day; activities: Activity[]; onActivitiesChange: (a: Activity[]) => void; onDelete: () => void;
+function DaySection({ day, activities, onActivitiesChange, onDelete, userRole }: {
+    day: Day; activities: Activity[]; onActivitiesChange: (a: Activity[]) => void; onDelete: () => void; userRole: string;
 }) {
     const [showAdd, setShowAdd] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const canEdit = userRole === "Owner" || userRole === "Editor";
 
     const handleAddActivity = (a: Omit<Activity, "_id" | "dayId" | "order">) => {
         onActivitiesChange([...activities, { ...a, _id: crypto.randomUUID(), dayId: day._id, order: activities.length + 1 }]);
@@ -236,6 +249,20 @@ function DaySection({ day, activities, onActivitiesChange, onDelete }: {
     };
     const handleEditActivity = (id: string, a: Partial<Activity>) => { onActivitiesChange(activities.map((x) => (x._id === id ? { ...x, ...a } : x))); setEditingId(null); };
     const handleDeleteActivity = (id: string) => { if (!confirm("Delete this activity?")) return; onActivitiesChange(activities.filter((x) => x._id !== id)); };
+    const handleMoveUp = (id: string) => {
+        const sorted = [...activities].sort((a, b) => a.order - b.order);
+        const idx = sorted.findIndex((a) => a._id === id);
+        if (idx <= 0) return;
+        [sorted[idx - 1].order, sorted[idx].order] = [sorted[idx].order, sorted[idx - 1].order];
+        onActivitiesChange([...sorted]);
+    };
+    const handleMoveDown = (id: string) => {
+        const sorted = [...activities].sort((a, b) => a.order - b.order);
+        const idx = sorted.findIndex((a) => a._id === id);
+        if (idx >= sorted.length - 1) return;
+        [sorted[idx + 1].order, sorted[idx].order] = [sorted[idx].order, sorted[idx + 1].order];
+        onActivitiesChange([...sorted]);
+    };
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -270,11 +297,18 @@ function DaySection({ day, activities, onActivitiesChange, onDelete }: {
                                     {act.description && <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">{act.description}</p>}
                                     {(act.estimatedCost ?? 0) > 0 && <span className="mt-2 inline-flex items-center text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">₹{act.estimatedCost!.toLocaleString()}</span>}
                                 </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => setEditingId(act._id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
-                                    <button onClick={() => handleDeleteActivity(act._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                    {canEdit && (
+                                        <>
+                                            <button onClick={() => handleMoveUp(act._id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600" title="Move up"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg></button>
+                                            <button onClick={() => handleMoveDown(act._id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600" title="Move down"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg></button>
+                                            <button onClick={() => setEditingId(act._id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg></button>
+                                            <button onClick={() => handleDeleteActivity(act._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
+                            <CommentThread activityId={act._id} userRole={userRole} />
                         </div>
                     )
                 )}
@@ -286,6 +320,7 @@ function DaySection({ day, activities, onActivitiesChange, onDelete }: {
                         Add Activity
                     </button>
                 )}
+                <DayCommentSection dayId={day._id} userRole={userRole} />
             </div>
         </div>
     );
@@ -618,5 +653,192 @@ function ReservationForm({ initial, onSubmit, onCancel, submitLabel }: {
                 <button type="submit" disabled={!title.trim()} className="px-4 py-1.5 text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 disabled:opacity-40 rounded-xl">{submitLabel}</button>
             </div>
         </form>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DAY COMMENT SECTION (REST-based)
+// ═══════════════════════════════════════════════════════════════════
+interface DayComment { _id: string; dayId: string; message: string; userName: string; createdAt: string; }
+
+function DayCommentSection({ dayId, userRole }: { dayId: string; userRole: string }) {
+    const { getToken } = useAuth();
+    const { user } = useUser();
+    const [comments, setComments] = useState<DayComment[]>([]);
+    const [text, setText] = useState("");
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const canWrite = userRole === "Owner" || userRole === "Editor" || userRole === "Viewer";
+
+    const load = useCallback(async () => {
+        try {
+            const token = await getToken();
+            const data = await apiFetch(`/api/comments/day/${dayId}`, token);
+            setComments(data || []);
+        } catch { /* ignore */ }
+    }, [dayId, getToken]);
+
+    useEffect(() => { if (open) load(); }, [open, load]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!text.trim()) return;
+        setLoading(true);
+        try {
+            const token = await getToken();
+            await apiFetch("/api/comments", token, {
+                method: "POST",
+                body: JSON.stringify({ dayId, message: text.trim(), userName: user?.fullName || user?.primaryEmailAddress?.emailAddress || "User" }),
+            });
+            setText("");
+            await load();
+        } catch { /* ignore */ } finally { setLoading(false); }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Delete comment?")) return;
+        const token = await getToken();
+        await apiFetch(`/api/comments/${id}`, token, { method: "DELETE" });
+        setComments((c) => c.filter((x) => x._id !== id));
+    };
+
+    return (
+        <div className="mt-3 border-t border-slate-100 pt-3">
+            <button onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                Day Discussion {comments.length > 0 && `(${comments.length})`}
+                <svg className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            {open && (
+                <div className="mt-2 space-y-2">
+                    {comments.length === 0 && <p className="text-xs text-slate-400 italic">No comments yet.</p>}
+                    {comments.map((c) => (
+                        <div key={c._id} className="group flex items-start gap-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">{c.userName?.[0]?.toUpperCase() || "?"}</div>
+                            <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium text-slate-700">{c.userName}</span>
+                                <span className="text-[10px] text-slate-400 ml-1.5">{new Date(c.createdAt).toLocaleString()}</span>
+                                <p className="text-xs text-slate-600 mt-0.5">{c.message}</p>
+                            </div>
+                            <button onClick={() => handleDelete(c._id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-400 transition-all shrink-0">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                    ))}
+                    {canWrite && (
+                        <form onSubmit={handleSubmit} className="flex items-center gap-2 mt-1">
+                            <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a comment…" className="flex-1 text-xs px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-black/10 focus:border-slate-300 bg-slate-50" />
+                            <button type="submit" disabled={loading || !text.trim()} className="px-3 py-1.5 text-xs font-medium bg-black text-white rounded-lg hover:bg-slate-800 disabled:opacity-40">Post</button>
+                        </form>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MEMBERS TAB
+// ═══════════════════════════════════════════════════════════════════
+function MembersTab({ tripId, members, userRole, onMembersChange }: {
+    tripId: string; members: Member[]; userRole: string; onMembersChange: (m: Member[]) => void;
+}) {
+    const { getToken } = useAuth();
+    const [email, setEmail] = useState("");
+    const [role, setRole] = useState<"Editor" | "Viewer">("Viewer");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const isOwner = userRole === "Owner";
+
+    const handleInvite = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email.trim()) return;
+        setSubmitting(true); setError(""); setSuccess("");
+        try {
+            const token = await getToken();
+            await apiFetch(`/api/trips/${tripId}/invite`, token, {
+                method: "POST",
+                body: JSON.stringify({ email: email.trim(), role }),
+            });
+            setSuccess(`Invite sent to ${email.trim()}`);
+            setEmail("");
+            const updated = await apiFetch(`/api/trips/${tripId}/members`, token);
+            onMembersChange(updated || []);
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to send invite");
+        } finally { setSubmitting(false); }
+    };
+
+    const ROLE_COLORS: Record<string, string> = {
+        Owner: "bg-amber-100 text-amber-700",
+        Editor: "bg-blue-100 text-blue-700",
+        Viewer: "bg-slate-100 text-slate-600",
+    };
+
+    return (
+        <div className="space-y-6">
+            <h2 className="text-xl font-bold text-slate-900">Members</h2>
+
+            {isOwner && (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                    <h3 className="font-semibold text-slate-800 mb-3">Invite Someone</h3>
+                    <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="colleague@email.com"
+                            required
+                            className="flex-1 text-sm px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black"
+                        />
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value as "Editor" | "Viewer")}
+                            className="text-sm px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-black/10 text-slate-700"
+                        >
+                            <option value="Editor">Editor</option>
+                            <option value="Viewer">Viewer</option>
+                        </select>
+                        <button
+                            type="submit"
+                            disabled={submitting || !email.trim()}
+                            className="px-5 py-2 bg-black hover:bg-slate-800 text-white text-sm font-medium rounded-xl disabled:opacity-40 transition-colors"
+                        >
+                            {submitting ? "Sending…" : "Invite"}
+                        </button>
+                    </form>
+                    {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+                    {success && <p className="mt-2 text-sm text-emerald-600">{success}</p>}
+                </div>
+            )}
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                    <span className="text-sm font-medium text-slate-600">{members.length} member{members.length !== 1 ? "s" : ""}</span>
+                </div>
+                {members.length === 0 ? (
+                    <p className="text-center text-sm text-slate-400 py-10">No members found.</p>
+                ) : (
+                    <ul className="divide-y divide-slate-100">
+                        {members.map((m) => (
+                            <li key={m._id} className="flex items-center justify-between px-5 py-3.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-bold text-slate-600">
+                                        {(m.name || m.email || "?")[0].toUpperCase()}
+                                    </div>
+                                    <div>
+                                        {m.name && <p className="text-sm font-medium text-slate-800">{m.name}</p>}
+                                        {m.email && <p className="text-xs text-slate-500">{m.email}</p>}
+                                        {!m.name && !m.email && <p className="text-xs text-slate-400 italic">Unknown user</p>}
+                                    </div>
+                                </div>
+                                <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${ROLE_COLORS[m.role] || ROLE_COLORS["Viewer"]}`}>{m.role}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </div>
     );
 }
