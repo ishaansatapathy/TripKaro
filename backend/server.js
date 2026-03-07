@@ -16,6 +16,7 @@ import explorerRoutes from "./routes/explorer.js";
 import sosRoutes from "./routes/sos.js";
 import attachmentRoutes from "./routes/attachments.js";
 import reservationRoutes from "./routes/reservations.js";
+import dealRoutes from "./routes/dealRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +50,7 @@ app.use("/api/explorer", explorerRoutes);
 app.use("/api/sos", sosRoutes);
 app.use("/api/attachments", attachmentRoutes);
 app.use("/api/reservations", reservationRoutes);
+app.use("/api/deals", dealRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

@@ -121,7 +121,7 @@ export default function TripPlanningPage() {
                             </div>
                             <div className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-2xl font-black tracking-tight">🏔️ Meghalaya Adventure</h2>
+                                    <h2 className="text-2xl font-black tracking-tight"> Meghalaya Adventure</h2>
                                     <p className="text-sm text-black/40 mt-1">3 days · 12 activities · ₹4,650 estimated</p>
                                 </div>
                                 <div className="flex items-center gap-3">
