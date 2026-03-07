@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/react";
 import Link from "@/lib/link";
 import Logo from "@/components/Logo";
+import { apiFetch } from "@/lib/api";
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface Trip {
@@ -54,10 +55,11 @@ function formatFileSize(bytes: number) { if (bytes < 1024) return `${bytes} B`; 
 // ═══════════════════════════════════════════════════════════════════
 export default function TripPage() {
     const { tripId } = useParams<{ tripId: string }>();
-    const { userId } = useAuth();
+    const { userId, getToken } = useAuth();
     const { user } = useUser();
 
     const [trip, setTrip] = useState<Trip | null>(null);
+    const [tripLoading, setTripLoading] = useState(true);
     const [days, setDays] = useState<Day[]>([]);
     const [activitiesMap, setActivitiesMap] = useState<Record<string, Activity[]>>({});
     const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -66,10 +68,18 @@ export default function TripPage() {
     const [reservations, setReservations] = useState<Reservation[]>([]);
     const [activeTab, setActiveTab] = useState<"itinerary" | "checklists" | "budget" | "attachments" | "reservations">("itinerary");
 
-    const reload = useCallback(() => {
+    const reload = useCallback(async () => {
         if (!tripId) return;
-        const trips: Trip[] = load("tripkaro_trips", []);
-        setTrip(trips.find((x) => x._id === tripId) ?? null);
+        try {
+            setTripLoading(true);
+            const token = await getToken();
+            const tripData = await apiFetch(`/api/trips/${tripId}`, token);
+            setTrip(tripData);
+        } catch {
+            setTrip(null);
+        } finally {
+            setTripLoading(false);
+        }
         const loadedDays: Day[] = load(`tripkaro_days_${tripId}`, []);
         setDays(loadedDays);
         const aMap: Record<string, Activity[]> = {};
@@ -79,7 +89,7 @@ export default function TripPage() {
         setExpenses(load(`tripkaro_expenses_${tripId}`, []));
         setAttachments(load(`tripkaro_attachments_${tripId}`, []));
         setReservations(load(`tripkaro_reservations_${tripId}`, []));
-    }, [tripId]);
+    }, [tripId, getToken]);
 
     useEffect(() => { reload(); }, [reload]);
 
@@ -89,6 +99,14 @@ export default function TripPage() {
     const saveExpenses = (e: Expense[]) => { setExpenses(e); save(`tripkaro_expenses_${tripId}`, e); };
     const saveAttachments = (a: Attachment[]) => { setAttachments(a); save(`tripkaro_attachments_${tripId}`, a); };
     const saveReservations = (r: Reservation[]) => { setReservations(r); save(`tripkaro_reservations_${tripId}`, r); };
+
+    if (tripLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     if (!trip) {
         return (
@@ -141,7 +159,7 @@ export default function TripPage() {
             <main className="max-w-5xl mx-auto px-6 py-8">
                 {activeTab === "itinerary" && <ItineraryTab tripId={tripId!} days={days} activitiesMap={activitiesMap} onDaysChange={saveDays} onActivitiesChange={saveActivities} />}
                 {activeTab === "checklists" && <ChecklistTab checklists={checklists} onChange={saveChecklists} />}
-                {activeTab === "budget" && <BudgetTab expenses={expenses} onChange={saveExpenses} userId={userId ?? "local"} />}
+                {activeTab === "budget" && <BudgetTab expenses={expenses} onChange={saveExpenses} userId={userId ?? user?.id ?? "local"} />}
                 {activeTab === "attachments" && <AttachmentTab tripId={tripId!} attachments={attachments} onChange={saveAttachments} />}
                 {activeTab === "reservations" && <ReservationTab reservations={reservations} onChange={saveReservations} />}
             </main>
