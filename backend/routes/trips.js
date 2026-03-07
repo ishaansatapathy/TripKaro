@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { createClerkClient } from "@clerk/express";
+import { Resend } from "resend";
 import Trip from "../models/Trip.js";
 import TripMember from "../models/TripMember.js";
 import Day from "../models/Day.js";
 import Expense from "../models/Expense.js";
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const router = Router();
 
@@ -188,6 +190,33 @@ router.post("/:tripId/invite", requireAuth(), async (req, res) => {
       userId: inviteeId,
       role,
     });
+
+    // 7. Send invite email via Resend (best-effort, don't fail the request if email fails)
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
+    const tripLink = `${frontendUrl}/trip/${tripId}`;
+    if (process.env.RESEND_API_KEY) {
+      try {
+        await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || "TripKaro <onboarding@resend.dev>",
+          to: email.trim().toLowerCase(),
+          subject: `You've been invited to "${trip.title}" on TripKaro`,
+          html: `
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+              <h2 style="color:#0f172a">You're invited to a trip! ✈️</h2>
+              <p style="color:#475569">Someone added you as a <strong>${role}</strong> on the trip:</p>
+              <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:16px 0">
+                <p style="font-size:18px;font-weight:600;color:#0f172a;margin:0">${trip.title}</p>
+                <p style="color:#64748b;font-size:13px;margin:6px 0 0">${new Date(trip.startDate).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} → ${new Date(trip.endDate).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})}</p>
+              </div>
+              <a href="${tripLink}" style="display:inline-block;background:#0f172a;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;font-size:14px">View Trip →</a>
+              <p style="color:#94a3b8;font-size:12px;margin-top:24px">If you didn't expect this, you can ignore this email.</p>
+            </div>
+          `,
+        });
+      } catch (emailErr) {
+        console.error("Resend email error (non-fatal):", emailErr.message);
+      }
+    }
 
     res.status(201).json({ message: "User invited successfully", role });
   } catch (err) {
