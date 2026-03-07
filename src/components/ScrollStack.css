@@ -1,0 +1,35 @@
+/* ─── Sticky Scroll Stack ─── */
+.scroll-stack-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.scroll-stack-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.scroll-stack-card {
+  position: absolute;
+  width: 90%;
+  max-width: 900px;
+  height: 22rem;
+  border-radius: 24px;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+  will-change: transform, opacity;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .scroll-stack-card {
+    width: 95%;
+    height: 18rem;
+    border-radius: 18px;
+  }
+}

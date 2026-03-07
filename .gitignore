@@ -13,9 +13,12 @@
 # testing
 /coverage
 
-# next.js
+# next.js (legacy)
 /.next/
 /out/
+
+# vite
+/dist/
 
 # production
 /build
@@ -39,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
