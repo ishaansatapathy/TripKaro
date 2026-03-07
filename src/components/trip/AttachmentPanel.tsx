@@ -35,6 +35,15 @@ interface AttachmentPanelProps {
     userRole: "owner" | "editor" | "viewer";
 }
 
+type AttachmentItem = {
+    _id: Id<"attachments">;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    createdAt: number;
+    fileUrl?: string;
+};
+
 const ACCEPTED_TYPES = [
     "application/pdf",
     "image/png",
@@ -153,7 +162,7 @@ export function AttachmentPanel({ tripId, userRole }: AttachmentPanelProps) {
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-                    {attachments.map((att) => {
+                    {attachments.map((att: AttachmentItem) => {
                         const { icon, color } = getFileIcon(att.fileType);
                         const isImage = att.fileType.startsWith("image/");
 

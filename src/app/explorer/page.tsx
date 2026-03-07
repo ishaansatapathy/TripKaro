@@ -309,7 +309,7 @@ export default function ExplorerPage() {
                     <AnimatedContent distance={30} direction="vertical" duration={0.6} ease="power2.out">
                         <div className="bg-white border border-black/10 rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.06)] overflow-hidden">
                             {/* Browser chrome */}
-                            <div className="flex items-center gap-2 px-5 py-3 border-b border-black/5 bg-black/[0.02]">
+                            <div className="flex items-center gap-2 px-5 py-3 border-b border-black/5 bg-black/2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-black/10" />
                                 <span className="w-2.5 h-2.5 rounded-full bg-black/10" />
                                 <span className="w-2.5 h-2.5 rounded-full bg-black/10" />
@@ -361,10 +361,10 @@ export default function ExplorerPage() {
                             <div className="grid lg:grid-cols-[1fr_340px]">
 
                                 {/* ── LEFT: Leaflet Map ── */}
-                                <div className="relative h-[420px] lg:h-[520px]">
+                                <div className="relative h-105 lg:h-130">
                                     {/* Loading / Error overlay */}
                                     {loading && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-[1000]">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-1000">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                                                 <p className="text-[12px] font-medium text-black/50">Scanning nearby places...</p>
@@ -372,7 +372,7 @@ export default function ExplorerPage() {
                                         </div>
                                     )}
                                     {error && !loading && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-[1000]">
+                                        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-1000">
                                             <div className="text-center px-6">
                                                 <p className="text-[13px] font-bold text-black/60 mb-2">{error}</p>
                                                 <button onClick={() => {
@@ -423,7 +423,7 @@ export default function ExplorerPage() {
                                                     }}
                                                 >
                                                     <Popup>
-                                                        <div className="min-w-[180px]">
+                                                        <div className="min-w-45">
                                                             <p className="font-bold text-[13px] mb-1">{place.name}</p>
                                                             {place.address && <p className="text-[11px] text-gray-500 mb-1">{place.address}</p>}
                                                             <p className="text-[10px] text-gray-400">{categoryEmoji(place.category)} {place.category} · {place.dist}</p>
@@ -435,7 +435,7 @@ export default function ExplorerPage() {
                                             ))}
                                         </MapContainer>
                                     ) : (
-                                        <div className="h-full w-full flex items-center justify-center bg-black/[0.025]">
+                                        <div className="h-full w-full flex items-center justify-center bg-black/2.5">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                                                 <p className="text-[12px] font-medium text-black/50">Getting your location...</p>
@@ -445,7 +445,7 @@ export default function ExplorerPage() {
 
                                     {/* Route info overlay */}
                                     {routeInfo && selectedPlace && (
-                                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur border border-black/10 rounded-xl px-4 py-3 z-[500] shadow-lg">
+                                        <div className="absolute top-4 right-4 bg-white/95 backdrop-blur border border-black/10 rounded-xl px-4 py-3 z-500 shadow-lg">
                                             <div className="flex items-center gap-3">
                                                 <div>
                                                     <p className="text-[11px] font-bold text-black/70">{routeInfo.distance}</p>
@@ -468,7 +468,7 @@ export default function ExplorerPage() {
                                     )}
 
                                     {/* Legend overlay */}
-                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-black/10 rounded-lg px-3 py-2 flex items-center gap-3 z-[500]">
+                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur border border-black/10 rounded-lg px-3 py-2 flex items-center gap-3 z-500">
                                         {[
                                             { emoji: "", label: "Attraction" },
                                             { emoji: "", label: "Restaurant" },
@@ -486,13 +486,13 @@ export default function ExplorerPage() {
                                 {/* ── RIGHT: Places List ── */}
                                 <div className="border-l border-black/5 flex flex-col">
                                     <div className="px-5 py-3 border-b border-black/5">
-                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/[0.03] border border-black/5">
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/3 border border-black/5">
                                             <svg className="w-3.5 h-3.5 text-black/25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                                             <span className="text-[12px] text-black/25">Search places...</span>
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto max-h-[460px]">
+                                    <div className="flex-1 overflow-y-auto max-h-115">
                                         {filtered.length === 0 && !loading && (
                                             <div className="px-5 py-12 text-center">
                                                 <p className="text-[13px] text-black/30 font-medium">{error ? "Unable to load places" : "No places found nearby"}</p>
@@ -501,7 +501,7 @@ export default function ExplorerPage() {
                                         {filtered.map((place) => (
                                             <div
                                                 key={place.id}
-                                                className={`px-5 py-4 border-b border-black/5 cursor-pointer transition-colors ${selectedPlace === place.id ? "bg-black/[0.04]" : "hover:bg-black/[0.02]"
+                                                className={`px-5 py-4 border-b border-black/5 cursor-pointer transition-colors ${selectedPlace === place.id ? "bg-black/4" : "hover:bg-black/2"
                                                     }`}
                                                 onClick={() => handleSelectPlace(place)}
                                             >
@@ -517,7 +517,7 @@ export default function ExplorerPage() {
                                                 {place.address && <p className="text-[11px] text-black/35 leading-relaxed line-clamp-2">{place.address}</p>}
                                                 <div className="flex flex-wrap gap-2 mt-1.5">
                                                     {place.cuisine && (
-                                                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/[0.04] text-black/40">{place.cuisine}</span>
+                                                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-black/4 text-black/40">{place.cuisine}</span>
                                                     )}
                                                     {place.openingHours && (
                                                         <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-600"> {place.openingHours}</span>
@@ -553,7 +553,7 @@ export default function ExplorerPage() {
                                 <div className="group p-7 rounded-2xl border border-black/5 hover:border-black/15 hover:shadow-[0_4px_20px_rgba(0,0,0,0.03)] transition-all duration-300">
                                     <div className="flex items-center justify-between mb-4">
                                         <span className="text-2xl">{f.icon}</span>
-                                        <span className="text-[10px] font-bold text-black/25 bg-black/[0.03] px-2 py-0.5 rounded-full">{f.count}</span>
+                                        <span className="text-[10px] font-bold text-black/25 bg-black/3 px-2 py-0.5 rounded-full">{f.count}</span>
                                     </div>
                                     <h3 className="text-base font-bold mb-1.5">{f.title}</h3>
                                     <p className="text-[12px] text-black/35 leading-relaxed">{f.desc}</p>

@@ -71,7 +71,7 @@ interface ReservationCardProps {
 
 function ReservationCard({ reservation, readOnly, isOwner, onEdit }: ReservationCardProps) {
     const deleteReservation = useMutation(api.reservations.deleteReservation);
-    const meta = TYPE_META[reservation.type];
+    const meta = TYPE_META[(reservation.type as ReservationType) ?? "other"];
 
     const handleDelete = async () => {
         if (!confirm("Delete this reservation?")) return;
@@ -355,7 +355,7 @@ export function ReservationPanel({ tripId, userRole }: ReservationPanelProps) {
                 </div>
             ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                    {reservations.map((r) => (
+                    {reservations.map((r: Doc<"reservations">) => (
                         <ReservationCard
                             key={r._id}
                             reservation={r}

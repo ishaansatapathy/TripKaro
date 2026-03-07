@@ -10,6 +10,15 @@ import Footer from "@/components/Footer";
 import HeroPlaneScene from "@/components/HeroPlaneScene";
 import MagicBento from "@/components/MagicBento";
 
+type FeatureCard = {
+  color: string;
+  label: string;
+  title: string;
+  description: string;
+  icon: string;
+  href: string;
+};
+
 /* ─── feature cards data ─── */
 const FEATURES = [
   {
@@ -180,7 +189,7 @@ export default function Home() {
                   icon: f.icon,
                   href: f.href,
                 }))}
-                renderCard={(card, index) => (
+                renderCard={(card: FeatureCard, index: number) => (
                   <a href={card.href} className="flex flex-col justify-between h-full w-full group no-underline">
                     <div className="flex items-start justify-between">
                       <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center">

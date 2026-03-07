@@ -9,6 +9,14 @@ interface DayCommentThreadProps {
     userRole?: "owner" | "editor" | "viewer";
 }
 
+type DayComment = {
+    _id: Id<"dayComments">;
+    userId: string;
+    userName: string;
+    message: string;
+    createdAt: number;
+};
+
 export function DayCommentThread({ dayId, userRole }: DayCommentThreadProps) {
     const comments = useQuery(api.dayComments.getDayComments, { dayId });
     const addComment = useMutation(api.dayComments.addDayComment);
@@ -104,7 +112,7 @@ export function DayCommentThread({ dayId, userRole }: DayCommentThreadProps) {
                         ) : comments.length === 0 ? (
                             <p className="text-center text-xs text-gray-300 py-3">No day-level comments yet</p>
                         ) : (
-                            comments.map((c) => {
+                            comments.map((c: DayComment) => {
                                 const isMine = c.userId === myUserId;
                                 return (
                                     <div key={c._id} className={`flex gap-2 ${isMine ? "flex-row-reverse" : ""}`}>
