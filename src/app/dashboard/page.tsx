@@ -25,7 +25,7 @@ function TripCard({ trip, isOwned }: { trip: Trip; isOwned: boolean }) {
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     return (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs hover:shadow-md transition-all group">
+        <Link href={`/trip/${trip._id}`} className="block bg-white border border-slate-200 rounded-2xl p-6 shadow-xs hover:shadow-md hover:border-slate-300 transition-all group cursor-pointer">
             <div className="flex items-start justify-between mb-4">
                 <div>
                     <h3 className="text-lg font-bold text-slate-900 group-hover:text-black transition-colors">{trip.title}</h3>
@@ -54,7 +54,7 @@ function TripCard({ trip, isOwned }: { trip: Trip; isOwned: boolean }) {
                     {new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
             </div>
-        </div>
+        </Link>
     );
 }
 
