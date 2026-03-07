@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SignInButton, useAuth } from "@clerk/react";
 import Link from "@/lib/link";
 import Navbar from "@/components/Navbar";
@@ -6,84 +6,188 @@ import Footer from "@/components/Footer";
 import AnimatedContent from "@/components/AnimatedContent";
 import SplitText from "@/components/SplitText";
 
-/* ─── public trips data ─── */
-const PUBLIC_TRIPS = [
+type Difficulty = "Easy" | "Moderate" | "Hard";
+type FilterKey = "all" | "easy" | "moderate" | "hard" | "this-month" | "spots-available";
+
+interface PublicTrip {
+    id: number;
+    title: string;
+    destination: string;
+    dates: string;
+    duration: string;
+    travelers: number;
+    spots: number;
+    difficulty: Difficulty;
+    desc: string;
+    startMonth: number;
+}
+
+const PUBLIC_TRIPS: PublicTrip[] = [
     {
+        id: 1,
         title: "Northeast Backpacking",
         destination: "Meghalaya · Assam · Nagaland",
-        dates: "Mar 15 – Mar 26",
+        dates: "Mar 15 - Mar 26",
         duration: "12 days",
         travelers: 14,
         spots: 6,
         difficulty: "Moderate",
         desc: "Explore living root bridges, Kaziranga, and the Hornbill Festival trail across Northeast India.",
+        startMonth: 2,
     },
     {
+        id: 2,
         title: "Goa New Year Trip",
         destination: "North & South Goa",
-        dates: "Dec 28 – Jan 3",
+        dates: "Dec 28 - Jan 3",
         duration: "7 days",
         travelers: 28,
         spots: 2,
         difficulty: "Easy",
         desc: "Beach parties, heritage walks, water sports, and the ultimate New Year countdown by the sea.",
+        startMonth: 11,
     },
     {
+        id: 3,
         title: "Kedarnath Trek Group",
         destination: "Uttarakhand",
-        dates: "May 10 – May 16",
+        dates: "May 10 - May 16",
         duration: "7 days",
         travelers: 18,
         spots: 7,
         difficulty: "Hard",
         desc: "Trek to one of India's holiest shrines at 3,583m. Includes Gaurikund to Kedarnath temple trail.",
+        startMonth: 4,
     },
     {
+        id: 4,
         title: "Rajasthan Royal Circuit",
         destination: "Jaipur · Udaipur · Jodhpur",
-        dates: "Nov 5 – Nov 14",
+        dates: "Nov 5 - Nov 14",
         duration: "10 days",
         travelers: 12,
         spots: 8,
         difficulty: "Easy",
-        desc: "Forts, palaces, desert safaris, and Rajasthani cuisine — the complete heritage experience.",
+        desc: "Forts, palaces, desert safaris, and Rajasthani cuisine - the complete heritage experience.",
+        startMonth: 10,
     },
     {
+        id: 5,
         title: "Spiti Valley Expedition",
         destination: "Himachal Pradesh",
-        dates: "Jun 1 – Jun 12",
+        dates: "Jun 1 - Jun 12",
         duration: "12 days",
         travelers: 10,
         spots: 5,
         difficulty: "Hard",
         desc: "High-altitude passes, ancient monasteries, and the raw beauty of the Trans-Himalayan desert.",
+        startMonth: 5,
     },
     {
+        id: 6,
         title: "Kerala Backwaters Cruise",
         destination: "Alleppey · Munnar · Kochi",
-        dates: "Aug 20 – Aug 26",
+        dates: "Aug 20 - Aug 26",
         duration: "7 days",
         travelers: 16,
         spots: 4,
         difficulty: "Easy",
         desc: "Houseboat stays, tea plantations, spice markets, and Kathakali performances in God's Own Country.",
+        startMonth: 7,
     },
 ];
 
-const STATS = [
-    { value: "120+", label: "Active Trips" },
-    { value: "3,400+", label: "Travelers" },
-    { value: "42", label: "Destinations" },
+const JOINED_TRIPS_STORAGE_KEY = "tripkaro-community-joined-trips";
+
+const FILTERS: Array<{ key: FilterKey; label: string }> = [
+    { key: "all", label: "All Trips" },
+    { key: "easy", label: "Easy" },
+    { key: "moderate", label: "Moderate" },
+    { key: "hard", label: "Hard" },
+    { key: "this-month", label: "This Month" },
+    { key: "spots-available", label: "Spots Available" },
 ];
 
 export default function CommunityPage() {
-    const { isSignedIn, isLoaded } = useAuth();
+    const { isSignedIn } = useAuth();
+    const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+    const [trips, setTrips] = useState<Array<PublicTrip & { joined: boolean }>>(
+        () => PUBLIC_TRIPS.map((trip) => ({ ...trip, joined: false })),
+    );
+
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(JOINED_TRIPS_STORAGE_KEY);
+            if (!raw) return;
+            const joinedIds = new Set<number>(JSON.parse(raw));
+            setTrips((prev) =>
+                prev.map((trip) => {
+                    if (!joinedIds.has(trip.id) || trip.joined || trip.spots < 1) return trip;
+                    return {
+                        ...trip,
+                        joined: true,
+                        travelers: trip.travelers + 1,
+                        spots: trip.spots - 1,
+                    };
+                }),
+            );
+        } catch {
+            // Ignore invalid persisted data.
+        }
+    }, []);
+
+    useEffect(() => {
+        const joinedTripIds = trips.filter((trip) => trip.joined).map((trip) => trip.id);
+        window.localStorage.setItem(JOINED_TRIPS_STORAGE_KEY, JSON.stringify(joinedTripIds));
+    }, [trips]);
+
+    const stats = useMemo(() => {
+        const destinationCount = new Set(trips.map((trip) => trip.destination)).size;
+        const travelerCount = trips.reduce((acc, trip) => acc + trip.travelers, 0);
+        return [
+            { value: `${trips.length}`, label: "Active Trips" },
+            { value: `${travelerCount}`, label: "Travelers" },
+            { value: `${destinationCount}`, label: "Destinations" },
+        ];
+    }, [trips]);
+
+    const filteredTrips = useMemo(() => {
+        const currentMonth = new Date().getMonth();
+        switch (activeFilter) {
+            case "easy":
+                return trips.filter((trip) => trip.difficulty === "Easy");
+            case "moderate":
+                return trips.filter((trip) => trip.difficulty === "Moderate");
+            case "hard":
+                return trips.filter((trip) => trip.difficulty === "Hard");
+            case "this-month":
+                return trips.filter((trip) => trip.startMonth === currentMonth);
+            case "spots-available":
+                return trips.filter((trip) => trip.spots > 0);
+            case "all":
+            default:
+                return trips;
+        }
+    }, [activeFilter, trips]);
+
+    const handleJoinTrip = (tripId: number) => {
+        setTrips((prev) =>
+            prev.map((trip) => {
+                if (trip.id !== tripId || trip.joined || trip.spots < 1) return trip;
+                return {
+                    ...trip,
+                    joined: true,
+                    travelers: trip.travelers + 1,
+                    spots: trip.spots - 1,
+                };
+            }),
+        );
+    };
 
     return (
         <div className="min-h-screen bg-white text-black antialiased">
             <Navbar />
 
-            {/* ═══════════ HERO ═══════════ */}
             <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-black text-white">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10">
                     <div className="grid lg:grid-cols-2 gap-12 items-end">
@@ -134,10 +238,9 @@ export default function CommunityPage() {
                             </AnimatedContent>
                         </div>
 
-                        {/* Stats */}
                         <AnimatedContent distance={20} direction="vertical" duration={0.5} delay={0.4} ease="power2.out">
                             <div className="grid grid-cols-3 gap-3">
-                                {STATS.map((s, i) => (
+                                {stats.map((s, i) => (
                                     <div key={i} className="text-center p-4 rounded-xl border border-white/10">
                                         <p className="text-2xl font-black tracking-tight">{s.value}</p>
                                         <p className="text-[10px] font-medium text-white/30 uppercase tracking-wider mt-0.5">{s.label}</p>
@@ -149,39 +252,37 @@ export default function CommunityPage() {
                 </div>
             </section>
 
-            {/* ═══════════ FILTERS ═══════════ */}
             <section className="py-6 border-b border-black/5">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-wrap items-center gap-2">
-                    {["All Trips", "Easy", "Moderate", "Hard", "This Month", "Spots Available"].map((f, i) => (
+                    {FILTERS.map((filter) => (
                         <button
-                            key={f}
-                            className={`px-4 py-1.5 text-[12px] font-semibold rounded-full transition-all ${i === 0
-                                    ? "bg-black text-white"
-                                    : "text-black/40 border border-black/10 hover:border-black/25 hover:text-black/60"
+                            key={filter.key}
+                            onClick={() => setActiveFilter(filter.key)}
+                            className={`px-4 py-1.5 text-[12px] font-semibold rounded-full transition-all ${activeFilter === filter.key
+                                ? "bg-black text-white"
+                                : "text-black/40 border border-black/10 hover:border-black/25 hover:text-black/60"
                                 }`}
+                            aria-pressed={activeFilter === filter.key}
                         >
-                            {f}
+                            {filter.label}
                         </button>
                     ))}
                 </div>
             </section>
 
-            {/* ═══════════ TRIP CARDS ═══════════ */}
             <section className="py-16 lg:py-24">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10">
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {PUBLIC_TRIPS.map((trip, i) => (
-                            <AnimatedContent key={i} distance={30} direction="vertical" duration={0.5} delay={i * 0.06} ease="power2.out">
+                        {filteredTrips.map((trip, i) => (
+                            <AnimatedContent key={trip.id} distance={30} direction="vertical" duration={0.5} delay={i * 0.06} ease="power2.out">
                                 <div className="group border border-black/8 rounded-2xl overflow-hidden hover:border-black/20 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 hover:-translate-y-1">
-
-                                    {/* Card header — black bar */}
                                     <div className="bg-black text-white px-6 py-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${trip.difficulty === "Easy"
-                                                    ? "bg-white/15 text-white/70"
-                                                    : trip.difficulty === "Moderate"
-                                                        ? "bg-white/20 text-white/80"
-                                                        : "bg-white text-black"
+                                                ? "bg-white/15 text-white/70"
+                                                : trip.difficulty === "Moderate"
+                                                    ? "bg-white/20 text-white/80"
+                                                    : "bg-white text-black"
                                                 }`}>
                                                 {trip.difficulty}
                                             </span>
@@ -194,20 +295,16 @@ export default function CommunityPage() {
                                         </p>
                                     </div>
 
-                                    {/* Card body */}
                                     <div className="px-6 py-5">
                                         <p className="text-sm text-black/45 leading-relaxed mb-5">{trip.desc}</p>
 
-                                        {/* Date row */}
                                         <div className="flex items-center gap-2 mb-4">
                                             <svg className="w-4 h-4 text-black/25" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                             <span className="text-[13px] font-medium text-black/50">{trip.dates}</span>
                                         </div>
 
-                                        {/* Travelers + join */}
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2.5">
-                                                {/* Avatar stack */}
                                                 <div className="flex -space-x-1.5">
                                                     {Array.from({ length: Math.min(trip.travelers, 4) }).map((_, j) => (
                                                         <div
@@ -225,18 +322,26 @@ export default function CommunityPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Join button */}
                                             {trip.spots > 0 ? (
                                                 !isSignedIn ? (
                                                     <SignInButton mode="modal">
                                                         <button className="px-5 py-2 text-[12px] font-bold bg-black text-white rounded-full hover:bg-black/80 transition-all group-hover:shadow-[0_2px_10px_rgba(0,0,0,0.15)]">
-                                                            Join Trip →
+                                                            Join Trip {"->"}
                                                         </button>
                                                     </SignInButton>
                                                 ) : (
-                                                    <button className="px-5 py-2 text-[12px] font-bold bg-black text-white rounded-full hover:bg-black/80 transition-all group-hover:shadow-[0_2px_10px_rgba(0,0,0,0.15)]">
-                                                        Join Trip →
-                                                    </button>
+                                                    trip.joined ? (
+                                                        <span className="px-5 py-2 text-[12px] font-bold bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200">
+                                                            Joined
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleJoinTrip(trip.id)}
+                                                            className="px-5 py-2 text-[12px] font-bold bg-black text-white rounded-full hover:bg-black/80 transition-all group-hover:shadow-[0_2px_10px_rgba(0,0,0,0.15)]"
+                                                        >
+                                                            Join Trip {"->"}
+                                                        </button>
+                                                    )
                                                 )
                                             ) : (
                                                 <span className="px-5 py-2 text-[12px] font-bold bg-black/5 text-black/25 rounded-full">
@@ -249,10 +354,15 @@ export default function CommunityPage() {
                             </AnimatedContent>
                         ))}
                     </div>
+
+                    {filteredTrips.length === 0 && (
+                        <div className="text-center py-12">
+                            <p className="text-sm text-black/40">No trips match this filter right now.</p>
+                        </div>
+                    )}
                 </div>
             </section>
 
-            {/* ═══════════ HOW IT WORKS ═══════════ */}
             <section className="py-20 lg:py-28 border-t border-b border-black/5">
                 <div className="max-w-7xl mx-auto px-6 lg:px-10">
                     <AnimatedContent distance={20} direction="vertical" duration={0.5} ease="power2.out">
@@ -297,7 +407,6 @@ export default function CommunityPage() {
                 </div>
             </section>
 
-            {/* ═══════════ CTA ═══════════ */}
             <section className="bg-black text-white py-24 lg:py-32 text-center">
                 <div className="max-w-3xl mx-auto px-6">
                     <AnimatedContent distance={25} direction="vertical" duration={0.6} ease="power2.out">
@@ -310,7 +419,7 @@ export default function CommunityPage() {
                                 <>
                                     <SignInButton mode="modal">
                                         <button className="px-8 py-3.5 text-sm font-bold bg-white text-black rounded-full hover:bg-white/90 transition-all">
-                                            Browse all trips →
+                                            Browse all trips {"->"}
                                         </button>
                                     </SignInButton>
                                     <SignInButton mode="modal">
@@ -321,7 +430,7 @@ export default function CommunityPage() {
                                 </>
                             ) : (
                                 <Link href="/dashboard" className="px-8 py-3.5 text-sm font-bold bg-white text-black rounded-full hover:bg-white/90 transition-all inline-block">
-                                    Open Dashboard →
+                                    Open Dashboard {"->"}
                                 </Link>
                             )}
                         </div>
@@ -333,3 +442,4 @@ export default function CommunityPage() {
         </div>
     );
 }
+
