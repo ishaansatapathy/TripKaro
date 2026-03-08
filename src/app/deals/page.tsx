@@ -87,28 +87,28 @@ export default function DealsPage() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-black/45">Flight Aggregator</p>
           <h1 className="text-3xl font-black tracking-tight lg:text-4xl">Find the best flight deal</h1>
           <p className="mt-3 max-w-2xl text-sm text-black/55">
-            Search stored offers from providers like IndiGo, MakeMyTrip, and Cleartrip. Click View Deal to open the original booking website.
+            Search stored offers from providers like IndiGo, MakeMyTrip, and Cleartrip. Enter city or state names and click View Deal to open the original booking website.
           </p>
 
           <form className="mt-6 grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={handleSearch}>
             <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-black/50">From City</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-black/50">From (City/State)</span>
               <input
                 className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm outline-none transition focus:border-black"
                 value={fromCity}
                 onChange={(event) => setFromCity(event.target.value)}
-                placeholder="Bangalore"
+                placeholder="Bangalore or Karnataka"
                 required
               />
             </label>
 
             <label className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wide text-black/50">To City</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-black/50">To (City/State)</span>
               <input
                 className="w-full rounded-xl border border-black/15 px-4 py-3 text-sm outline-none transition focus:border-black"
                 value={toCity}
                 onChange={(event) => setToCity(event.target.value)}
-                placeholder="Goa"
+                placeholder="Goa or Maharashtra"
                 required
               />
             </label>
