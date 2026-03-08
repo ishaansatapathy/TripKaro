@@ -87,7 +87,7 @@ export default function DemoPage() {
                 </div>
             </header>
 
-            {/* Pill Navigation (Like MastryHub Inner Pages) */}
+            {/* Pill Navigation */}
             <div className="max-w-3xl mx-auto px-6 py-8">
                 <div className="bg-slate-100/80 p-1.5 rounded-xl flex items-center justify-between gap-1 overflow-x-auto shadow-xs border border-slate-200/60 font-medium text-sm">
                     {["Overview", "Itinerary", "Budget", "Members", "Settings"].map((tab) => (
