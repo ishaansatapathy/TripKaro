@@ -70,7 +70,7 @@ export default function Home() {
         {/* ═══════════ HERO ═══════════ */}
         <section className="relative min-h-[calc(100vh-64px)] flex items-center border-b border-black/5">
           <div className="max-w-7xl mx-auto px-6 lg:px-10 w-full">
-            <div className="grid grid-cols-[minmax(0,1fr)_120px] sm:grid-cols-[minmax(0,1fr)_180px] lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center">
+            <div className="grid grid-cols-[minmax(0,1fr)_140px] sm:grid-cols-[minmax(0,1fr)_210px] lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-16 items-center">
               {/* LEFT: Text */}
               <div className="py-20 lg:py-0 flex flex-col gap-6">
                 <AnimatedContent distance={20} direction="vertical" duration={0.4} delay={0} ease="power2.out">
@@ -161,7 +161,7 @@ export default function Home() {
 
               {/* RIGHT: 3D Plane */}
               <AnimatedContent distance={60} direction="horizontal" duration={0.9} delay={0.3} ease="power2.out" reverse>
-                <div className="relative h-[220px] sm:h-[320px] lg:h-[550px]">
+                <div className="relative h-[240px] sm:h-[340px] lg:h-[550px]">
                   <HeroPlaneScene />
                 </div>
               </AnimatedContent>
