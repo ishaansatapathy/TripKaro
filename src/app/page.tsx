@@ -83,7 +83,7 @@ export default function Home() {
                 <div>
                   <BlurText
                     text="Your friends cancelled."
-                    className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-tight"
+                    className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-tight"
                     delay={80}
                     animateBy="words"
                     direction="bottom"
@@ -92,7 +92,7 @@ export default function Home() {
                     stepDuration={0.5}
                   />
                   <div className="mt-1 flex items-baseline gap-2 flex-wrap">
-                    <span className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-tight text-black/30">
+                    <span className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-tight text-black/30">
                       We found
                     </span>
                     <RotatingText
@@ -103,7 +103,7 @@ export default function Home() {
                         "new friends.",
                         "the vibe.",
                       ]}
-                      mainClassName="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-tight overflow-hidden pb-1"
+                      mainClassName="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-black tracking-tight leading-tight overflow-hidden pb-1"
                       staggerFrom="first"
                       staggerDuration={0.025}
                       splitBy="characters"
@@ -114,7 +114,7 @@ export default function Home() {
                 </div>
 
                 {/* Subtext */}
-                <p className="text-base sm:text-lg text-black/45 leading-relaxed max-w-md">
+                <p className="text-lg sm:text-xl text-black/45 leading-relaxed max-w-lg">
                   Plan trips, find travel partners, and explore together — with people who won't ghost the group chat.
                 </p>
 
